@@ -4,11 +4,10 @@ const nodemailer = require("nodemailer");
 
 console.log('The app is up and running...');
 
-const { URL, SELECTOR, CHECKING_IN_SECONDS, RECEIVER_EMAIL, SENDER_EMAIL_SERVICE, SENDER_EMAIL_USER, SENDER_EMAIL_PASSWORD, LAST_PRICE } = process.env;
-let lastPrice = Number(LAST_PRICE);
+const { URL, SELECTOR, CHECKING_IN_SECONDS, RECEIVER_EMAIL, SENDER_EMAIL_SERVICE, SENDER_EMAIL_USER, SENDER_EMAIL_PASSWORD } = process.env;
+let { LAST_PRICE } = process.env;
 
 async function start() {
-    console.log('START CHECKING!!!')
     // Checks for environment variables
     if (!URL || !SELECTOR || !CHECKING_IN_SECONDS || !RECEIVER_EMAIL || !SENDER_EMAIL_SERVICE || !SENDER_EMAIL_USER || !SENDER_EMAIL_PASSWORD || !LAST_PRICE) {
         clearInterval(checkingPrice);
@@ -22,10 +21,10 @@ async function start() {
 
     // Extract price from the defined selector (HTML element)
     const info = await page.$eval(SELECTOR, el => el.textContent);
-    const currentPrice = Number(info.replace(/[^0-9.-]+/g,""));
+    const currentPrice = info.replace(/[^0-9/./,/-]+/g,"");
 
     // Send mail if a current price if lower than the defined maximum price
-    if (currentPrice !== lastPrice) {
+    if (currentPrice !== LAST_PRICE) {
         // async..await is not allowed in global scope, must use a wrapper
         async function main() {
             // Create reusable transporter object using the default SMTP transport
@@ -45,17 +44,17 @@ async function start() {
                 from: `"Node Scraper️️" <${SENDER_EMAIL_USER}>`,
                 to: RECEIVER_EMAIL,
                 subject: 'Price has changed! 📉',
-                text: `Current price: ${currentPrice.toLocaleString('sr-RS', { style: 'currency', currency: 'RSD' })}`,
+                text: `Current price: ${currentPrice}`,
                 html: `
                     <div>Current price: 
-                        <b>${currentPrice.toLocaleString('sr-RS', { style: 'currency', currency: 'RSD' })}</b>
+                        <b>${currentPrice}</b>
                     </div>
                     <a href=${URL}>View product</a>
                 `,
             });
 
             console.log("Message sent: %s", info.messageId);
-            lastPrice = currentPrice
+            LAST_PRICE = currentPrice
         }
 
         main().catch(console.error);
